@@ -32,7 +32,7 @@ let tempoSessao = 0;
 
 client.data = require("./db.json");
 
-console.log(client.data)
+console.log(client.data["recorde"]);
 
 client.on('messageCreate', message => {
     if (!message.content.startsWith(PREFIX)) return;
@@ -62,7 +62,17 @@ client.on('messageCreate', message => {
             fs.writeFile("./db.json", JSON.stringify(client.data), err => {
                 if (err) throw err;
             })
-            message.reply(`A viagem durou ${horas.toFixed(0)} horas e ${minutos} minutos!\nA kombi ta rodando à ${(client.data['total'] / 60).toFixed()} horas e ${client.data['total']%60} minutos.`);
+            message.reply(`A viagem durou ${(tempoSessao / 60).toFixed(0)} horas e ${tempoSessao % 60} minutos!
+A kombi ta rodando à ${(client.data['total'] / 60).toFixed()} horas e ${client.data['total']%60} minutos.`);
+
+            if (tempoSessao > client.data['recorde']){
+                message.reply(`Batemos o recorde de ${ (client.data['recorde'] / 60).toFixed(0) } horas e ${ client.data['recorde'] % 60} minutos.
+Atual: ${ (tempoSessao / 60).toFixed(0) } horas e ${ tempoSessao % 60} minutos.`)
+                client.data['recorde'] = tempoSessao;
+                fs.writeFile("./db.json", JSON.stringify(client.data), err => {
+                    if (err) throw err;
+                })
+            }
         }else{
             message.reply("Não da pra terminar o que nunca começou!");
         }
