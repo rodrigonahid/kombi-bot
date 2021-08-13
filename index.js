@@ -29,10 +29,10 @@ let currentTime = new Date();
 let inicio = 0;
 let fim = 0;
 let tempoSessao = 0;
-
+let tempoRegistrado = 0;
+let isRunning = false;
+let interval;
 client.data = require("./db.json");
-
-console.log(client.data["recorde"]);
 
 client.on('messageCreate', message => {
     if (!message.content.startsWith(PREFIX)) return;
@@ -42,37 +42,41 @@ client.on('messageCreate', message => {
         currentTime = new Date();
         message.reply(`São ${String(currentTime.getHours())} horas e ${String(currentTime.getMinutes())} minutos!`);
     }else if (commandName.toLowerCase() === "start"){
-        currentTime = new Date();
-        if(inicio === 0){
+        if(!isRunning){
+            isRunning = true;
             inicio = Date.now();
-            console.log(inicio);
+            let timer = 1;
             message.reply(`A viagem começou às ${String(currentTime.getHours())} horas e ${String(currentTime.getMinutes())} minutos!`);
+            interval = setInterval( () => {
+                tempoRegistrado += timer;
+                client.data['total'] += timer;
+                fs.writeFile("./db.json", JSON.stringify(client.data), err => {
+                    if (err) throw err;
+                })
+                if (tempoRegistrado % 5 == 0){
+                    message.reply(`Estamos à ${(tempoRegistrado / 60).toFixed(0)} horas e ${tempoRegistrado % 60} minutos na estrada. Total: ${(client.data['total'] / 60).toFixed(0)} horas e ${client.data['total'] % 60} minutos`);
+                    if (tempoRegistrado > client.data['recorde']){
+                        message.reply(`Novo recorde: ${ (tempoRegistrado / 60).toFixed(0) } horas e ${ tempoRegistrado % 60} minutos.`)
+                        client.data['recorde'] = tempoRegistrado;
+                        fs.writeFile("./db.json", JSON.stringify(client.data), err => {
+                            if (err) throw err;
+                        })
+                    }
+                }
+            }, (timer * 60000));
+           
         }else{
             message.reply("A Kombi já está na estrada!");
         }
     }else if(commandName.toLowerCase() === "finish"){
-        if(inicio !== 0){
+        if(isRunning){
+            clearInterval(interval);
             fim = Date.now();
             tempoSessao = fim - inicio;
             tempoSessao = Math.floor(tempoSessao / 60000);
-            let horas = tempoSessao / 60;
-            let minutos = tempoSessao % 60;
             inicio = 0;
-            client.data['total'] += tempoSessao;
-            fs.writeFile("./db.json", JSON.stringify(client.data), err => {
-                if (err) throw err;
-            })
             message.reply(`A viagem durou ${(tempoSessao / 60).toFixed(0)} horas e ${tempoSessao % 60} minutos!
 A kombi ta rodando à ${(client.data['total'] / 60).toFixed()} horas e ${client.data['total']%60} minutos.`);
-
-            if (tempoSessao > client.data['recorde']){
-                message.reply(`Batemos o recorde de ${ (client.data['recorde'] / 60).toFixed(0) } horas e ${ client.data['recorde'] % 60} minutos.
-Atual: ${ (tempoSessao / 60).toFixed(0) } horas e ${ tempoSessao % 60} minutos.`)
-                client.data['recorde'] = tempoSessao;
-                fs.writeFile("./db.json", JSON.stringify(client.data), err => {
-                    if (err) throw err;
-                })
-            }
         }else{
             message.reply("Não da pra terminar o que nunca começou!");
         }
